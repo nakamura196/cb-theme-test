@@ -3,6 +3,7 @@
 layout: page
 custom-foot: js/timeline-js.html
 ---
+{%- assign t = site.data.locale[site.lang] -%}
 {%- assign field = site.data.theme.timeline-field | default: page.timeline-field | default: "date" -%}
 {% if site.data.theme.timeline-child-objects == true %}
 {%- assign items = site.data[site.metadata] | where_exp: 'item','item.objectid' -%}
@@ -17,14 +18,14 @@ custom-foot: js/timeline-js.html
 {%- assign navYears = site.data.theme.year-navigation | split: ";" -%}
 {%- elsif site.data.theme.year-nav-increment -%}
 {%- capture navYears -%}
-{%- for i in uniqueYears -%}{%- assign t = i | modulo: site.data.theme.year-nav-increment -%}
-{%- if t == 0 -%}{{ i }}{% unless forloop.last %};{% endunless %}{% endif %}{% endfor %}{%- endcapture -%}
+{%- for i in uniqueYears -%}{%- assign yr_mod = i | modulo: site.data.theme.year-nav-increment -%}
+{%- if yr_mod == 0 -%}{{ i }}{% unless forloop.last %};{% endunless %}{% endif %}{% endfor %}{%- endcapture -%}
 {%- assign navYears = navYears | split: ";" -%}
 {%- endif -%}
 {%- if navYears.size > 1 -%}
 <div class="dropdown float-end" id="year-nav">
     <button class="btn btn-primary dropdown-toggle" type="button" id="yearButton" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-        Year
+        {{ site.data.locale[site.lang].year_nav | default: "Year" }}
     </button>
     <div class="dropdown-menu" aria-labelledby="yearButton">
         {% for y in navYears %}
@@ -35,7 +36,7 @@ custom-foot: js/timeline-js.html
 
 {{ content }}
 
-<h3><a href="#y{{ uniqueYears | first }}">{{ uniqueYears | first }}</a> to <a href="#y{{ uniqueYears | last }}">{{ uniqueYears | last }}</a></h3>
+<h3><a href="#y{{ uniqueYears | first }}">{{ uniqueYears | first }}</a> {{ site.data.locale[site.lang].to | default: "to" }} <a href="#y{{ uniqueYears | last }}">{{ uniqueYears | last }}</a></h3>
 
 <table id="timeline" class="table table-striped">
     <tbody>

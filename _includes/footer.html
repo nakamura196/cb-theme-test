@@ -1,3 +1,4 @@
+{%- assign t = site.data.locale[site.lang] -%}
 <footer class="bg-black pt-4 mt-auto container-fluid">
 
     <div class="row border-bottom border-white pb-4 mb-2">
@@ -28,12 +29,12 @@
 
            {% if site.organization-logo-nav %}<p class="text-md-end">
                 <a href="{{ site.organization-link }}">
-                    <img id="footer-logo" class="img-fluid" src="{{ site.organization-logo-nav | relative_url }}" alt="{{ site.organization-name | escape }} home">
+                    <img id="footer-logo" class="img-fluid" src="{{ site.organization-logo-nav | relative_url }}" alt="{{ site.organization-name | escape }}{{ t.org_home_suffix | default: " home" }}">
                 </a>
             </p>
             {% endif %}
             <p class="text-white text-md-end" id="footer-credits">
-                <small><em>built with</em>
+                <small><em>{{ t.built_with | default: "built with" }}</em>
                     <a href="https://collectionbuilder.github.io/" title="CollectionBuilder">
                         <img src="{{ '/assets/img/collectionbuilder-logo.png' | relative_url }}" class="img-fluid" alt="CollectionBuilder" >
                     </a>
@@ -45,7 +46,7 @@
     </div>
 
     <div class="col-md-12 text-center pt-3 pb-1">
-        <p class="text-white">Last updated {{ site.time | date: '%Y' }}</p>
+        <p class="text-white">{{ t.last_updated | default: "Last updated" }} {{ site.time | date: '%Y' }}</p>
     </div>
 
 </footer>

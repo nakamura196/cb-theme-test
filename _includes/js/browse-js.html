@@ -1,3 +1,4 @@
+{%- assign t = site.data.locale[site.lang] -%}
 {% if site.data.theme.browse-child-objects == true %}
 {%- assign items = site.data[site.metadata] | where_exp: 'item','item.objectid' -%}
 {% else %}
@@ -7,6 +8,7 @@
 {% unless site.data.theme.faceted-search or site.data.theme.advanced-search %}
 {% include js/browse-simple-js.html %}
 {% else %}
+{% if site.data.theme.search-cjk == true %}<script src="{{ '/assets/cjk-index/cjk-index.js' | relative_url }}"></script>{% endif %}
 <script>
 /**
  * BROWSE PAGE JAVASCRIPT - Less Janky Version
@@ -42,6 +44,28 @@ const dateFields = ['date', 'created', 'published', 'modified', 'issued', 'date_
 
 // Cache DOM elements
 var loadingIcon, filterTextBox, browseItemsDiv;
+
+{% if site.data.theme.search-cjk == true %}
+/* with search-cjk, the facets come from the filters stored in the search index
+   (cjk_index 0.2): values are matched whole (a link to 明治 does not also find
+   明治以前), and counts come from the index instead of a scan of the items.
+   The text box and the advanced search still scan the items as before; the
+   facets narrow what they give. If the index fails to load, the page works
+   as without it. */
+{% include js/cjk-facets-js.html %}
+var cjkIdx = null;
+var cjkReady = CJKIndex.load({{ '/assets/cjk-index/search.json' | relative_url | jsonify }})
+    .then(function (i) { cjkIdx = i; }, function (e) { console.warn(e); });
+/* the list before the facets narrow it, kept so a facet click can redraw without searching again */
+var browseBase = [];
+/* the ref of an item in the index (the collectionbuilder preset of cjk_index) */
+function cjkRef(item) {
+    return item.parent ? item.parent + ".html#" + item.id : item.id + ".html";
+}
+function cjkPass(filter) {
+    return new Set(cjkIdx.search("", { filter: filter }).map(r => r.ref));
+}
+{% endif %}
 
 {% include helpers/get-icon.js %}
 
@@ -95,10 +119,10 @@ function makeCard(obj) {
     // Media type badge
     if(obj.display_template) {
         const mediaIcon = getIcon(obj.display_template, obj.format, "hidden");
-        card += `<p class="card-text"><small><a class="btn btn-sm btn-outline-secondary" href="{{ page.url | relative_url }}#display_template:${encodeURIComponent(obj.display_template)}">${obj.display_template.toUpperCase().replace("_"," ")} ${mediaIcon}</a></small></p>`;
+        card += `<p class="card-text"><small><a class="btn btn-sm btn-outline-secondary" href="{{ page.url | relative_url }}#display_template:${encodeURIComponent(obj.display_template)}">${((({{ t.template_labels | jsonify }}) || {})[obj.display_template] || obj.display_template).toUpperCase().replace("_"," ")} ${mediaIcon}</a></small></p>`;
     }
     
-    card += `<hr><a href="${itemHref}" class="btn btn-sm btn-light" title="link to ${obj.title}">View Full Record</a></div></div></div>`;
+    card += `<hr><a href="${itemHref}" class="btn btn-sm btn-light" title="{{ t.link_to | default: "link to" }} ${obj.title}">{{ t.view_full_record | default: "View Full Record" }}</a></div></div></div>`;
     return card;
 }
 
@@ -272,11 +296,13 @@ function itemMatches(item, field, query, startDate, endDate) {
     // Text search
     if (query && query !== "") {
         const q = query.trim().toUpperCase();
+        // with search-cjk, compare normalized strings (old/new kanji, kana, full/half width)
+        const has = window.CJKIndex ? (v) => CJKIndex.includes(v, query) : (v) => v.toUpperCase().includes(q);
         
         // Search all fields 
         if (field === "all") {
             for (let k in item) {
-                if (k !== "img" && item[k] && item[k].toString().toUpperCase().includes(q)) {
+                if (k !== "img" && item[k] && has(item[k].toString())) {
                     return true;
                 }
             }
@@ -286,7 +312,7 @@ function itemMatches(item, field, query, startDate, endDate) {
         // Search specific field
         if (item[field]) {
             const fieldValues = item[field].toString().split(";");
-            return fieldValues.some(value => value.trim().toUpperCase().includes(q));
+            return fieldValues.some(value => has(value.trim()));
         }
     }
     
@@ -346,9 +372,25 @@ function advancedFilterItems(arr, searchCriteria) {
 }
 
 /**
- * Update the display with filtered results
+ * Draw the cards and the count; with search-cjk, the chosen facets narrow the list first
  */
-function updateDisplay(filteredItems, query = "", field = "", startDate = "", endDate = "") {
+function renderCards(filteredItems) {
+    {% if site.data.theme.search-cjk == true %}
+    if (cjkIdx) {
+        browseBase = filteredItems;
+        const filter = cjkFacets.filter();
+        if (Object.keys(filter).length) {
+            const pass = cjkPass(filter);
+            filteredItems = filteredItems.filter(item => pass.has(cjkRef(item)));
+        }
+        const baseRefs = browseBase.map(cjkRef);
+        cjkFacets.render(f => {
+            if (!Object.keys(f).length) return baseRefs;
+            const pass = cjkPass(f);
+            return baseRefs.filter(r => pass.has(r));
+        });
+    }
+    {% endif %}
     // Use DocumentFragment for better performance when adding many cards
     const fragment = document.createDocumentFragment();
     const tempDiv = document.createElement('div');
@@ -367,7 +409,21 @@ function updateDisplay(filteredItems, query = "", field = "", startDate = "", en
     browseItemsDiv.appendChild(fragment);
     
     // Update count
-    document.querySelector("#numberOf").innerHTML = `${filteredItems.length} of {{ items | size }} items`;
+    document.querySelector("#numberOf").innerHTML = {{ t.n_of_total | default: "%n of %total items" | jsonify }}.replace("%n", filteredItems.length).replace("%total", {{ items | size }});
+    // closing line under the grid, so a short last row reads as the end of the list
+    const browseEnd = document.querySelector("#browseEnd");
+    if (browseEnd) {
+        browseEnd.textContent = {{ t.browse_end | default: "End of list (%n items)" | jsonify }}.replace("%n", filteredItems.length);
+        // only for lists long enough to scroll; a short result is already summed up by the count above
+        browseEnd.classList.toggle("d-none", filteredItems.length <= 6);
+    }
+}
+
+/**
+ * Update the display with filtered results
+ */
+function updateDisplay(filteredItems, query = "", field = "", startDate = "", endDate = "") {
+    renderCards(filteredItems);
     
     // Focus active input (only if needed)
     if (query || startDate || endDate) {
@@ -468,6 +524,7 @@ function resetFilter() {
         for (let i = 0; i < 3; i++) addSearchRow();
     }
     
+    {% if site.data.theme.search-cjk == true %}if (cjkIdx) cjkFacets.clear();{% endif %}
     filterItems(items, "", "all");
     displayActiveFilters([]);
     return false;
@@ -496,6 +553,7 @@ function handleHashChange() {
     
     // No hash - show all items
     if (!hash) {
+        {% if site.data.theme.search-cjk == true %}if (cjkIdx) cjkFacets.clear();{% endif %}
         filterTextBox.value = "";
         {% unless site.data.theme.faceted-search == false %}document.querySelector("#fieldSelect").value = "all";{% endunless%}
         filterItems(items, "", "all");
@@ -519,6 +577,17 @@ function handleHashChange() {
         }
     }
     
+    {% if site.data.theme.search-cjk == true %}
+    // A link to a value of a facet (era:明治 from an item page) chooses that value in the index
+    if (cjkFacets.has(field) && query) {
+        cjkFacets.only(field, query);
+        filterTextBox.value = "";
+        {% unless site.data.theme.faceted-search == false %}document.querySelector("#fieldSelect").value = "all";{% endunless %}
+        filterItems(items, "", "all");
+        updateAdvancedSearchModal([]);
+        return;
+    }
+    {% endif %}
     // Update UI and filter
     filterTextBox.value = query;
     {% unless site.data.theme.faceted-search == false %}
@@ -692,20 +761,20 @@ function displayActiveFilters(searchCriteria) {
         button.type = 'button';
         
         // Get field display name
-        let fieldName = criteria.field === 'all' ? 'All Fields' : 
-        'display_template' === criteria.field ? 'Content Type' : 
-            {% for f in fields %}'{{f.field}}' === criteria.field ? '{% if f.display_name %}{{f.display_name}}{% else %}{{f.field | capitalize }}{% endif %}' : {% endfor %}
+        let fieldName = criteria.field === 'all' ? {{ t.all_fields | default: 'All Fields' | jsonify }} : 
+        'display_template' === criteria.field ? {{ t.content_type | default: 'Content Type' | jsonify }} : 
+            {% for f in fields %}'{{f.field}}' === criteria.field ? '{% if f.display_name %}{{f.display_name}}{% elsif f.facet_name %}{{f.facet_name}}{% else %}{{f.field | capitalize }}{% endif %}' : {% endfor %}
             criteria.field.charAt(0).toUpperCase() + criteria.field.slice(1).replace(/_/g, ' ');
         
         // Format display value for dates
         let displayValue = criteria.value;
         if (isDateField(criteria.field) && (criteria.startDate || criteria.endDate)) {
             if (criteria.startDate && criteria.endDate) {
-                displayValue = `${criteria.startDate} to ${criteria.endDate}`;
+                displayValue = {{ t.date_range | default: "%s to %e" | jsonify }}.replace("%s", criteria.startDate).replace("%e", criteria.endDate);
             } else if (criteria.startDate) {
-                displayValue = `from ${criteria.startDate}`;
+                displayValue = {{ t.date_from | default: "from %s" | jsonify }}.replace("%s", criteria.startDate);
             } else if (criteria.endDate) {
-                displayValue = `until ${criteria.endDate}`;
+                displayValue = {{ t.date_until | default: "until %e" | jsonify }}.replace("%e", criteria.endDate);
             }
         }
         
@@ -737,7 +806,7 @@ function displayActiveFilters(searchCriteria) {
             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"></path>
             <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"></path>
         </svg>
-        Add Field
+        {{ t.add_field | default: "Add Field" }}
     `;
     addButton.addEventListener('click', () => {
         new bootstrap.Modal(document.getElementById('advancedSearchModal')).show();
@@ -822,6 +891,13 @@ function sorting(jsonObject, keyToSortBy) {
  * Initialize page on load
  */
 window.addEventListener('load', function() {
+    {% if site.data.theme.search-cjk == true %}cjkReady.then(initBrowse);{% else %}initBrowse();{% endif %}
+});
+
+function initBrowse() {
+    {% if site.data.theme.search-cjk == true %}
+    if (cjkIdx) cjkFacets.attach('browseFacets', cjkIdx, onFacetChange);
+    {% endif %}
     // Cache DOM elements
     loadingIcon = document.querySelector("#loadingIcon");
     filterTextBox = document.querySelector('#filterTextBox');
@@ -901,7 +977,22 @@ window.addEventListener('load', function() {
     
     // Set up event handlers
     setupEventHandlers();
-});
+}
+
+{% if site.data.theme.search-cjk == true %}
+/**
+ * A facet was chosen or cleared: redraw from the kept list, and keep a
+ * single choice in the hash (#era:明治) so the page can be linked to
+ */
+function onFacetChange() {
+    renderCards(browseBase);
+    if (window.location.search) return; // advanced search: leave its URL alone
+    const hash = decodeURIComponent(location.hash.substr(1));
+    if (hash && !(hash.includes(":") && cjkFacets.has(hash.split(":")[0]))) return; // a text filter: leave it
+    const one = cjkFacets.single();
+    history.replaceState(null, "", location.pathname + (one ? "#" + encodeURIComponent(one[0] + ":" + one[1]) : ""));
+}
+{% endif %}
 
 /**
  * Set up all event handlers

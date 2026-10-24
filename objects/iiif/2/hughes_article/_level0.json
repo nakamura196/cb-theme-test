@@ -1,0 +1,26 @@
+{
+  "width": 1140,
+  "height": 1622,
+  "sizes": [
+    {
+      "width": 90,
+      "height": 128
+    },
+    {
+      "width": 200,
+      "height": 285
+    },
+    {
+      "width": 256,
+      "height": 364
+    },
+    {
+      "width": 1024,
+      "height": 1457
+    },
+    {
+      "width": 1140,
+      "height": 1622
+    }
+  ]
+}

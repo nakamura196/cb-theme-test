@@ -1,3 +1,4 @@
+{%- assign t = site.data.locale[site.lang] -%}
 {% if site.data.theme.map-child-objects == true %}
 {%- assign items = site.data[site.metadata] | where_exp: 'item','item.objectid' -%}
 {% else %}
@@ -56,8 +57,14 @@
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     });
+    /* pale map of the Geospatial Information Authority of Japan: quiet enough for the markers to stand out (Japan only in detail) */
+    var GSI_Pale = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>'
+    });
     /* add base map switcher */
     var baseMaps = {
+        "地理院 淡色地図": GSI_Pale,
         "Esri World StreetMap": Esri_WorldStreetMap,
         "Esri National Geo": Esri_NatGeoWorldMap,
         "Esri Imagery": Esri_WorldImagery,
@@ -70,8 +77,8 @@
     {% if site.data.theme.map-search == true %}
     /* add search, https://github.com/naomap/leaflet-fusesearch */
     var options = {
-        title: 'Search Map Items',
-        placeholder: 'Search map items...',
+        title: {{ t.map_search_title | default: "Search Map Items" | jsonify }},
+        placeholder: {{ t.map_search_placeholder | default: "Search map items..." | jsonify }},
         threshold: {{ site.data.theme.map-search-fuzziness | default: 0.35 }},
         showResultFct: function(feature, container) {
             var result = `<strong>${feature.properties.title}</strong><br>`;
@@ -128,7 +135,7 @@
             thumbImg = getIcon(feature.properties.template,feature.properties.format,"thumb")
         }
         // set up popup content
-        var popupTemplate = '<h2 class="h4"><a class="text-dark" href="' + itemHref + '">' +
+        var popupTemplate = '<h2 class="h5"><a class="text-dark" href="' + itemHref + '">' +
             feature.properties.title + '</a></h2><div class="text-center"><a href="' + itemHref + 
             '" >' + thumbImg + '</a></div><p>';
         {% for f in fields %}{% if f.display_name %}
@@ -136,8 +143,9 @@
             popupTemplate += '<strong>{{ f.display_name }}:</strong> ' + feature.properties[{{ f.field | escape | jsonify }}] + '<br>'; 
         }
         {% endif %}{% endfor %}
-        popupTemplate += '</p><div class="text-center"><a class="btn btn-light" href="' + itemHref + '" >View Item</a></div>';
-        layer.bindPopup(popupTemplate);
+        popupTemplate += '</p><div class="text-center"><a class="btn btn-light" href="' + itemHref + '" >' + {{ t.view_item | default: "View Item" | jsonify }} + '</a></div>';
+        // Leaflet sizes the popup to its content, which squeezed the title to a few characters per line; give it room
+        layer.bindPopup(popupTemplate, { minWidth: 240, maxWidth: 300 });
     }
     function objectMarkers(feature,latlng) {
         var marker = L.marker(latlng, {alt: feature.properties.title});

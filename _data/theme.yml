@@ -4,6 +4,12 @@
 ##########
 
 ##########
+# LOOK
+#
+theme-style: modern # modern (white, navy, one-row header) / museum (warm paper, serif headings, title banner above the menu)
+color-mode-toggle: true # true / false, light/dark switch at the right end of the menu; follows the OS setting until a visitor picks one
+
+##########
 # HOME PAGE
 #
 # featured image is used in home page banner and in meta markup to represent the collection
@@ -112,7 +118,7 @@ base-font-size: 1.2em
 text-color: "#191919"
 link-color: "#0d6efd"
 base-font-family: # comment out for bootstrap defaults. e.g. Roboto
-font-cdn: # add font stylesheet, e.g. <link href="https://fonts.googleapis.com/css?family=Roboto&display=swap" rel="stylesheet">
+font-cdn: '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400..700;1,400..700&family=Source+Serif+4:wght@400..700&display=swap" rel="stylesheet">'
 
 # THEME ICONS [optional!]
 # default icons can be overridden or new icons can be added using "icons" object

@@ -8,9 +8,9 @@
 # URL VARIABLES
 #
 # site domain, full URL to the production location of your collection
-url: 
+url: https://nakamura196.github.io
 # path to location on the domain if necessary e.g. /digital/hjccc
-baseurl: 
+baseurl: /cb-theme-test
 # location of code, the full url to your github repository
 source-code: https://github.com/CollectionBuilder/collectionbuilder-csv
 
@@ -34,7 +34,14 @@ author: CollectionBuilder
 #
 # Set the metadata for your collection (the name of the CSV file in your _data directory that describes the objects in your collection) 
 # Use the filename of your CSV **without** the ".csv" extension! E.g. _data/demo-metadata.csv --> "demo-metadata"
-metadata: demo-compoundobjects-metadata 
+metadata: demo-compoundobjects-metadata
+
+# IIIF manifests for items whose images are in objects/ (static_iiif gem), at
+# /iiif/3/<objectid>/manifest.json and /iiif/2/<objectid>/manifest.json.
+# Run `rake generate_iiif` to add level 0 image services (fixed sizes, tiles for large images).
+static_iiif:
+  manifests:
+    v2: iiif/2/%{id}/manifest.json
 # page generation settings [optional!]
 # [optional: only used if you need to tweak CB defaults or generate from more than one data file]
 # page_gen:
@@ -73,7 +80,7 @@ organization-logo-nav: https://www.lib.uidaho.edu/collectionbuilder/cdil-white.p
 # provide a relative path in this repository or full url 
 lib-assets: /assets/lib
 # ignore stuff
-exclude: [docs/, Rakefile, rakelib/, README.md, LICENSE, CITATION.cff, CODE_OF_CONDUCT.md, CONTRIBUTING.md, SECURITY.md, AGENTS.md, CLAUDE.md, HUMANS.md]
+exclude: [vendor/, docs/, Rakefile, rakelib/, README.md, LICENSE, CITATION.cff, CODE_OF_CONDUCT.md, CONTRIBUTING.md, SECURITY.md, AGENTS.md, CLAUDE.md, HUMANS.md]
 # compress CSS output
 sass:
   style: compressed
