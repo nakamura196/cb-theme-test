@@ -21,5 +21,5 @@ end
 
 group :jekyll_plugins do
   # static IIIF: info.json and the item manifests at build time (see static_iiif: in _config.yml)
-  gem 'static_iiif', git: 'https://github.com/nakamura196/static_iiif.git', ref: 'c2806f1464483a0fbcaf992a6b434a69bca53a9a', require: 'static_iiif/jekyll'
+  gem 'static_iiif', git: 'https://github.com/nakamura196/static_iiif.git', ref: 'f67712315a6a3a928b141511f4a457b5576a8d8b', require: 'static_iiif/jekyll'
 end
