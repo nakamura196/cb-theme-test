@@ -96,7 +96,11 @@ a:hover { color: var(--museum-accent-dark); }
 
 /* ========== dark mode: colours fixed in templates and libraries ========== */
 [data-bs-theme="dark"] {
-    .text-dark { color: var(--museum-ink) !important; }
+    /* Bootstrap's "a.text-dark:hover" outranks ".text-dark": the banner title went black on hover */
+    .text-dark, a.text-dark:hover, a.text-dark:focus { color: var(--museum-ink) !important; }
+    /* the banner logo (CB-CSV's default is a black image): put it on a light plate */
+    #title + div .btn:has(img) { padding: 0; border-color: transparent; }
+    #title + div .btn img { background: #f4f1ea; padding: 0.4rem 0.6rem; border-radius: 4px; }
     .bg-white { background-color: var(--museum-surface) !important; }
     .dropdown-menu { --bs-dropdown-link-active-color: var(--museum-on-accent); }
     .pagination { --bs-pagination-active-color: var(--museum-on-accent); }
